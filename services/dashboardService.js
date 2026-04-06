@@ -1,72 +1,35 @@
 const db = require('../config/db');
 
-// ✅ MAIN DASHBOARD DATA
-const getDashboardData = (userId) => {
+exports.getDashboardData = (userId, role) => {
   return new Promise((resolve, reject) => {
 
-    // 1️⃣ TOTAL INCOME & EXPENSE
-    const totalsQuery = `
+    let query = `
       SELECT 
         SUM(CASE WHEN type='income' THEN amount ELSE 0 END) as totalIncome,
         SUM(CASE WHEN type='expense' THEN amount ELSE 0 END) as totalExpense
       FROM transactions
-      WHERE user_id = ? AND is_deleted = 0
+      WHERE is_deleted = 0
     `;
 
-    // 2️⃣ CATEGORY-WISE
-    const categoryQuery = `
-      SELECT category, SUM(amount) as total
-      FROM transactions
-      WHERE user_id = ? AND is_deleted = 0
-      GROUP BY category
-    `;
+    let params = [];
 
-    // 3️⃣ RECENT TRANSACTIONS
-    const recentQuery = `
-      SELECT * FROM transactions
-      WHERE user_id = ? AND is_deleted = 0
-      ORDER BY date DESC
-      LIMIT 5
-    `;
+    // 🔐 viewer → only own data
+    if (role === 'viewer') {
+      query += " AND user_id = ?";
+      params.push(userId);
+    }
 
-    // 4️⃣ MONTHLY TREND
-    const monthlyQuery = `
-      SELECT 
-        DATE_FORMAT(date, '%Y-%m') as month,
-        SUM(CASE WHEN type='income' THEN amount ELSE 0 END) as income,
-        SUM(CASE WHEN type='expense' THEN amount ELSE 0 END) as expense
-      FROM transactions
-      WHERE user_id = ? AND is_deleted = 0
-      GROUP BY month
-      ORDER BY month ASC
-    `;
-
-    db.query(totalsQuery, [userId], (err, totals) => {
+    db.query(query, params, (err, result) => {
       if (err) return reject(err);
 
-      db.query(categoryQuery, [userId], (err, categories) => {
-        if (err) return reject(err);
+      const income = result[0].totalIncome || 0;
+      const expense = result[0].totalExpense || 0;
 
-        db.query(recentQuery, [userId], (err, recent) => {
-          if (err) return reject(err);
-
-          db.query(monthlyQuery, [userId], (err, monthly) => {
-            if (err) return reject(err);
-
-            resolve({
-              totals: totals[0],
-              categories,
-              recent,
-              monthly
-            });
-          });
-        });
+      resolve({
+        totalIncome: income,
+        totalExpense: expense,
+        balance: income - expense
       });
     });
-
   });
-};
-
-module.exports = {
-  getDashboardData
 };

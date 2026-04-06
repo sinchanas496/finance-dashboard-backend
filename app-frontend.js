@@ -1,13 +1,18 @@
-let token = "";
-let userRole = "";
+const API = "http://localhost:5000/api";
+
+let token = localStorage.getItem("token");
+let role = localStorage.getItem("role");
 let chart;
+
+if (token) showDashboard();
+
 
 // LOGIN
 async function login() {
   const email = document.getElementById("email").value;
   const password = document.getElementById("password").value;
 
-  const res = await fetch("http://localhost:5000/api/users/login", {
+  const res = await fetch(`${API}/users/login`, {
     method: "POST",
     headers: {"Content-Type": "application/json"},
     body: JSON.stringify({ email, password })
@@ -15,107 +20,48 @@ async function login() {
 
   const data = await res.json();
 
-  if (data.token) {
-    token = data.token;
+  token = data.token;
+  role = data.user.role;
 
-    // decode role
-    const payload = JSON.parse(atob(token.split('.')[1]));
-    userRole = payload.role;
+  localStorage.setItem("token", token);
+  localStorage.setItem("role", role);
 
-    document.getElementById("loginBox").classList.add("hidden");
-    document.getElementById("dashboard").classList.remove("hidden");
+  showDashboard();
+}
 
-    // role-based UI
-    if (userRole === "viewer") {
-      document.getElementById("formBox").style.display = "none";
-    }
 
-    loadTransactions();
+// SHOW DASHBOARD
+function showDashboard() {
+  document.getElementById("loginPage").classList.add("hidden");
+  document.getElementById("dashboardPage").classList.remove("hidden");
 
-  } else {
-    document.getElementById("error").innerText = data.message;
+  if (role !== "admin") {
+    document.getElementById("addSection").style.display = "none";
   }
-}
 
-// LOGOUT
-function logout() {
-  location.reload();
-}
-
-// ADD TRANSACTION
-async function addTransaction() {
-  const amount = document.getElementById("amount").value;
-  const type = document.getElementById("type").value;
-  const category = document.getElementById("category").value;
-
-  await fetch("http://localhost:5000/api/transactions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": "Bearer " + token
-    },
-    body: JSON.stringify({ amount, type, category })
-  });
-
+  loadDashboard();
   loadTransactions();
 }
 
-// LOAD DATA
-async function loadTransactions() {
-  const res = await fetch("http://localhost:5000/api/transactions", {
-    headers: {
-      "Authorization": "Bearer " + token
-    }
+
+// DASHBOARD DATA
+async function loadDashboard() {
+  const res = await fetch(`${API}/dashboard`, {
+    headers: { Authorization: `Bearer ${token}` }
   });
 
   const data = await res.json();
 
-  renderList(data.data);
-  renderChart(data.data);
+  document.getElementById("income").innerText = `₹${data.totalIncome}`;
+  document.getElementById("expense").innerText = `₹${data.totalExpense}`;
+  document.getElementById("balance").innerText = `₹${data.balance}`;
+
+  renderChart(data.totalIncome, data.totalExpense);
 }
 
-// DELETE
-async function deleteTransaction(id) {
-  await fetch(`http://localhost:5000/api/transactions/${id}`, {
-    method: "DELETE",
-    headers: {
-      "Authorization": "Bearer " + token
-    }
-  });
 
-  loadTransactions();
-}
-
-// LIST UI
-function renderList(transactions) {
-  const list = document.getElementById("list");
-  list.innerHTML = "";
-
-  transactions.forEach(t => {
-    const li = document.createElement("li");
-
-    li.innerHTML = `
-      ${t.type} - ₹${t.amount} (${t.category})
-      ${userRole === 'admin' ? `<span class="delete" onclick="deleteTransaction(${t.id})">Delete</span>` : ""}
-    `;
-
-    list.appendChild(li);
-  });
-}
-
-function renderChart(data) {
-  let income = 0, expense = 0;
-
-  data.forEach(t => {
-    if (t.type === "income") income += Number(t.amount);
-    else expense += Number(t.amount);
-  });
-
-  // ✅ UPDATE STATS UI
-  document.getElementById("income").innerText = income;
-  document.getElementById("expense").innerText = expense;
-  document.getElementById("balance").innerText = income - expense;
-
+// CHART
+function renderChart(income, expense) {
   const ctx = document.getElementById("chart");
 
   if (chart) chart.destroy();
@@ -125,10 +71,75 @@ function renderChart(data) {
     data: {
       labels: ["Income", "Expense"],
       datasets: [{
-        data: [income, expense],
-        backgroundColor: ["#22c55e", "#ef4444"]
+        data: [income, expense]
       }]
     }
   });
+}
 
+
+// TRANSACTIONS
+async function loadTransactions() {
+  const res = await fetch(`${API}/transactions`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+  const data = await res.json();
+
+  const container = document.getElementById("transactions");
+  container.innerHTML = "";
+
+  data.data.forEach(tx => {
+    const div = document.createElement("div");
+    div.className = "tx";
+
+    div.innerHTML = `
+      <span>${tx.type} - ₹${tx.amount} (${tx.category})</span>
+      ${
+        role === "admin"
+          ? `<button onclick="deleteTx(${tx.id})">Delete</button>`
+          : ""
+      }
+    `;
+
+    container.appendChild(div);
+  });
+}
+
+
+// ADD
+async function addTransaction() {
+  const amount = document.getElementById("amount").value;
+  const type = document.getElementById("type").value;
+  const category = document.getElementById("category").value;
+
+  await fetch(`${API}/transactions`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify({ amount, type, category })
+  });
+
+  loadDashboard();
+  loadTransactions();
+}
+
+
+// DELETE
+async function deleteTx(id) {
+  await fetch(`${API}/transactions/${id}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+  loadTransactions();
+}
+
+
+// LOGOUT
+function logout() {
+  localStorage.clear();
+  location.reload();
 }

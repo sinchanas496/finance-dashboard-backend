@@ -8,55 +8,80 @@
 
 <body>
 
-<div class="container">
-
-  <!-- LOGIN -->
-  <div id="loginBox" class="card glass">
-    <h2>🔐 Finance Login</h2>
+<!-- LOGIN PAGE -->
+<div id="loginPage" class="login-page">
+  <div class="login-card">
+    <h2>Finance Dashboard</h2>
     <input id="email" placeholder="Email">
     <input id="password" type="password" placeholder="Password">
     <button onclick="login()">Login</button>
-    <p id="error" class="error"></p>
   </div>
-
-  <!-- DASHBOARD -->
-  <div id="dashboard" class="hidden">
-
-    <div class="topbar">
-      <h2>💰 Finance Dashboard</h2>
-      <button class="logout" onclick="logout()">Logout</button>
-    </div>
-<div class="stats">
-  <div class="card stat income">Income: ₹<span id="income">0</span></div>
-  <div class="card stat expense">Expense: ₹<span id="expense">0</span></div>
-  <div class="card stat balance">Balance: ₹<span id="balance">0</span></div>
 </div>
 
-    <!-- ADD FORM -->
-    <div id="formBox" class="card glass">
-      <h3>Add Transaction</h3>
-      <input id="amount" placeholder="Amount">
-      <select id="type">
-        <option value="income">Income</option>
-        <option value="expense">Expense</option>
-      </select>
-      <input id="category" placeholder="Category">
-      <button onclick="addTransaction()">Add</button>
+<!-- DASHBOARD -->
+<div id="dashboardPage" class="hidden">
+
+  <!-- TOP NAVBAR -->
+  <div class="navbar">
+    <div class="logo">FD</div>
+    <div class="nav-right">
+      <button onclick="logout()">Logout</button>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="container">
+
+    <h1>Dashboard</h1>
+
+    <!-- CARDS -->
+    <div class="cards">
+      <div class="card green">
+        <p>Income</p>
+        <h2 id="income">₹0</h2>
+      </div>
+
+      <div class="card red">
+        <p>Expense</p>
+        <h2 id="expense">₹0</h2>
+      </div>
+
+      <div class="card blue">
+        <p>Balance</p>
+        <h2 id="balance">₹0</h2>
+      </div>
     </div>
 
-    <!-- CHART -->
-    <div class="card glass">
-      <canvas id="chart"></canvas>
+    <!-- MAIN GRID -->
+    <div class="grid">
+
+      <!-- CHART -->
+      <div class="box">
+        <h3>Overview</h3>
+        <canvas id="chart"></canvas>
+      </div>
+
+      <!-- ADD (ADMIN ONLY) -->
+      <div id="addSection" class="box">
+        <h3>Add Transaction</h3>
+        <input id="amount" placeholder="Amount">
+        <select id="type">
+          <option value="income">Income</option>
+          <option value="expense">Expense</option>
+        </select>
+        <input id="category" placeholder="Category">
+        <button onclick="addTransaction()">Add</button>
+      </div>
+
     </div>
 
-    <!-- LIST -->
-    <div class="card glass">
+    <!-- TRANSACTIONS -->
+    <div class="box full">
       <h3>Transactions</h3>
-      <ul id="list"></ul>
+      <div id="transactions"></div>
     </div>
 
   </div>
-
 </div>
 
 <script src="app-frontend.js"></script>

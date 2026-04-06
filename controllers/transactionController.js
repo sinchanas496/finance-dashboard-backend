@@ -1,12 +1,19 @@
 const service = require('../services/transactionService');
 
 
-// ✅ CREATE TRANSACTION
+// ✅ CREATE TRANSACTION (ADMIN ONLY)
 const createTransaction = async (req, res) => {
   try {
+
+    // 🔐 ROLE CHECK
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({
+        message: "Only admin can add transactions"
+      });
+    }
+
     const { amount, type, category, date, notes } = req.body;
 
-    // validation
     if (!amount || amount <= 0) {
       return res.status(400).json({ message: "Invalid amount" });
     }
@@ -37,13 +44,14 @@ const createTransaction = async (req, res) => {
 
 
 
-// ✅ GET WITH FILTERS
+// ✅ GET TRANSACTIONS (ALL ROLES WITH FILTER)
 const getTransactions = async (req, res) => {
   try {
     const { page = 1, limit = 5, type, category, search } = req.query;
 
     const data = await service.getTransactionsAdvanced(
       req.user.id,
+      req.user.role,   // ✅ IMPORTANT
       page,
       limit,
       type,
@@ -62,9 +70,18 @@ const getTransactions = async (req, res) => {
 };
 
 
-// ✅ SOFT DELETE
+
+// ✅ DELETE TRANSACTION (ADMIN ONLY)
 const deleteTransaction = async (req, res) => {
   try {
+
+    // 🔐 ROLE CHECK
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({
+        message: "Only admin can delete transactions"
+      });
+    }
+
     await service.deleteTransaction(req.params.id, req.user.id);
 
     res.json({

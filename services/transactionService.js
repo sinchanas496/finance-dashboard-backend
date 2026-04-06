@@ -1,10 +1,14 @@
 const db = require('../config/db');
+
+
+// ✅ CREATE TRANSACTION (Admin only - controller handles role)
 const createTransaction = (data) => {
   return new Promise((resolve, reject) => {
     const { userId, amount, type, category, date, notes } = data;
 
     db.query(
-      `INSERT INTO transactions (user_id, amount, type, category, date, notes, is_deleted)
+      `INSERT INTO transactions 
+       (user_id, amount, type, category, date, notes, is_deleted)
        VALUES (?, ?, ?, ?, ?, ?, 0)`,
       [userId, amount, type, category, date, notes],
       (err, result) => {
@@ -14,18 +18,28 @@ const createTransaction = (data) => {
     );
   });
 };
-// ✅ ADVANCED GET (FILTER + PAGINATION + SEARCH)
-const getTransactionsAdvanced = (userId, page, limit, type, category, search) => {
+
+
+
+// ✅ GET TRANSACTIONS (ROLE-BASED + FILTER + PAGINATION)
+const getTransactionsAdvanced = (userId, role, page, limit, type, category, search) => {
   return new Promise((resolve, reject) => {
 
     const offset = (page - 1) * limit;
 
     let query = `
       SELECT * FROM transactions
-      WHERE user_id = ? AND is_deleted = 0
+      WHERE is_deleted = 0
     `;
 
-    let params = [userId];
+    let params = [];
+
+    // 🔐 ROLE-BASED ACCESS
+    if (role === 'viewer') {
+      query += " AND user_id = ?";
+      params.push(userId);
+    }
+    // analyst & admin → see all (no filter)
 
     // 🔍 FILTERS
     if (type) {
@@ -62,20 +76,23 @@ const getTransactionsAdvanced = (userId, page, limit, type, category, search) =>
 
 
 
-
-// ✅ SOFT DELETE
-const deleteTransaction = (id, userId) => {
+// ✅ SOFT DELETE (Admin only - controller handles role)
+const deleteTransaction = (id) => {
   return new Promise((resolve, reject) => {
+
     db.query(
-      "UPDATE transactions SET is_deleted = 1 WHERE id = ? AND user_id = ?",
-      [id, userId],
+      "UPDATE transactions SET is_deleted = 1 WHERE id = ?",
+      [id],
       (err, result) => {
         if (err) return reject(err);
         resolve(result);
       }
     );
+
   });
 };
+
+
 
 module.exports = {
   createTransaction,
